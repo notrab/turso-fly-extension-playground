@@ -1,27 +1,26 @@
 import { Hono } from "hono";
-import { jwt } from "hono/jwt";
 import { HTTPException } from "hono/http-exception";
 import crypto from "crypto";
 
 const SHARED_SECRET = "hellofly";
-const TURSO_API_TOKEN = "DONOTCOMMITJAMIE";
+const TURSO_API_TOKEN = "turso auth api-tokens mint <token name>";
 const TURSO_API_URL = "https://api.turso.tech";
 
 const app = new Hono();
 
-app.use("*", async (c, next) => {
-  const signature = c.req.header("X-Signature");
-  const body = await c.req.text();
-  const hmac = crypto.createHmac("sha256", SHARED_SECRET);
-  hmac.update(body);
-  const calculatedSignature = hmac.digest("hex");
+// app.use("*", async (c, next) => {
+//   const signature = c.req.header("X-Signature");
+//   const body = await c.req.text();
+//   const hmac = crypto.createHmac("sha256", SHARED_SECRET);
+//   hmac.update(body);
+//   const calculatedSignature = hmac.digest("hex");
 
-  if (signature !== calculatedSignature) {
-    throw new HTTPException(401, { message: "Invalid signature" });
-  }
+//   if (signature !== calculatedSignature) {
+//     throw new HTTPException(401, { message: "Invalid signature" });
+//   }
 
-  await next();
-});
+//   await next();
+// });
 
 // Some questions.. If a user has a group already, we should use that.
 // If not, we should create a new group.
@@ -101,7 +100,7 @@ app.post("/extensions", async (c) => {
     throw new HTTPException(500, { message: "Failed to create Turso group" });
   }
 
-  const group = await groupResponse.json();
+  const { group } = await groupResponse.json();
 
   // Create a database
   const dbResponse = await fetch(
@@ -127,7 +126,7 @@ app.post("/extensions", async (c) => {
   // Add read replicas provided by Fly CLI
   for (const region of read_regions) {
     await fetch(
-      `${TURSO_API_URL}/v1/organizations/${organization_id}/groups/${group.name}/locations/${region}`,
+      `${TURSO_API_URL}/v1/organizations/${organization_id}/groups/${groupName}/locations/${region}`,
       {
         method: "POST",
         headers: {
@@ -159,7 +158,7 @@ app.post("/extensions", async (c) => {
   return c.json({
     id: database.id,
     config: {
-      TURSO_DATABASE_URL: `libsql://${database.hostname}`,
+      TURSO_DATABASE_URL: `libsql://${database.Hostname}`,
       TURSO_AUTH_TOKEN: authToken,
     },
     name: database.Name,
@@ -168,8 +167,7 @@ app.post("/extensions", async (c) => {
 
 app.get("/extensions/:id", async (c) => {
   const id = c.req.param("id"); // group/database name is the extension name
-  const body = await c.req.json();
-  const { organization_name } = body;
+  const organization_name = c.req.query("organization_name");
 
   const response = await fetch(
     `${TURSO_API_URL}/v1/organizations/${organization_name}/databases/${id}`,
