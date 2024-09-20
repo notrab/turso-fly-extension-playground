@@ -35,6 +35,8 @@ This throwaway example demonstrates the API needed on the Turso Platform API to 
    3. Add locations to the group for each `read_region`
    4. Create a token with read/write access for the database
 
+   **organization_id is ignored below and databases are created in a single account until we do SSO related work for Fly**
+
    ```bash
    body='{
      "name": "my-db",
@@ -65,12 +67,10 @@ This throwaway example demonstrates the API needed on the Turso Platform API to 
 5. Get the status of an extension
 
    ```bash
-   id="my-db"
-   org_name="YOUR_ORG_NAME"
-   body="{}"
-   signature=$(generate_signature "$body")
+   url_path="/extensions/$id?organization_name=$org_name"
+   signature=$(echo -n "$url_path" | openssl dgst -sha256 -hmac "$SHARED_SECRET" -hex | sed 's/^.* //')
 
-   curl -X GET "http://localhost:3000/extensions/$id?organization_name=$org_name" \
+   curl -X GET "http://localhost:3000$url_path" \
      -H "Content-Type: application/json" \
      -H "X-Signature: $signature"
    ```
